@@ -1,0 +1,21 @@
+{
+  "partitions": {
+    "cpu-short": {
+      "batch": false,
+      "installation": true,
+      "max_cpus": 16,
+      "max_ram_gb": 64,
+      "max_gpus": 0
+    },
+    "gpu-short": {
+      "max_cpus": 48,
+      "max_ram_gb": 256,
+      "max_gpus": 4,
+      "qos": "normal"
+    }
+  },
+  "nodes": [
+    {"name": "gpu-node-a", "gpu_type": "gpu-small", "gpu_count": 2, "vram_gb": 24},
+    {"name": "gpu-node-b", "gpu_type": "gpu-large", "gpu_count": 1, "vram_gb": 80}
+  ]
+}

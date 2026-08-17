@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[dev]"
+      - run: ruff check src tests examples
+      - run: mypy src/cluster_model_runner src/nodus
+      - run: pytest -q
+      - run: python -m pip wheel . --no-deps --wheel-dir dist
+      - name: Verify typed public packages in wheel
+        run: |
+          python - <<'PY'
+          from glob import glob
+          from zipfile import ZipFile
+
+          with ZipFile(glob("dist/*.whl")[0]) as wheel:
+              names = set(wheel.namelist())
+          assert "nodus/__init__.py" in names
+          assert "nodus/runtime.py" in names
+          assert "nodus/py.typed" in names
+          assert "cluster_model_runner/py.typed" in names
+          PY

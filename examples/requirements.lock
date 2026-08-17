@@ -1,0 +1,3 @@
+# Pin the actual runtime dependencies for your model, for example:
+# torch==<compatible-version>
+# transformers==<compatible-version>
