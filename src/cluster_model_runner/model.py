@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from .client import ClusterClient, JobHandle
+    from .sessions import SessionChannel, SessionHandle
 
 
 @dataclass(frozen=True)
@@ -117,6 +118,15 @@ class Model:
             checkpoint_name=self.checkpoint.name if self.checkpoint else "default",
         )
         return self.client.submit(request)
+
+    def session(
+        self,
+        *,
+        entrypoint: str | None = None,
+        channel: SessionChannel | str = "auto",
+    ) -> SessionHandle:
+        """Submit a long-lived worker that loads this model exactly once."""
+        return self.client.session_service.start(self, entrypoint=entrypoint, channel=channel)
 
 
 def _valid_name(value: str) -> bool:

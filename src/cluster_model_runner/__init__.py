@@ -8,6 +8,8 @@ from .exceptions import JobExecutionError
 from .model import Checkpoint, Model, Project, Venv
 from .models import JobRequest, JobState, JobStatus, ResourceRequest
 from .runtime import RuntimeRequest
+from .session_runtime import SessionContext, SessionRequest
+from .sessions import SessionChannel, SessionHandle, SessionResult, SessionState, SessionStatus
 
 __all__ = [
     "Checkpoint",
@@ -24,6 +26,13 @@ __all__ = [
     "Project",
     "ResourceRequest",
     "RuntimeRequest",
+    "SessionChannel",
+    "SessionContext",
+    "SessionHandle",
+    "SessionRequest",
+    "SessionResult",
+    "SessionState",
+    "SessionStatus",
     "Venv",
 ]
 

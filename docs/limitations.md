@@ -4,8 +4,13 @@
   profiling from arbitrary model code is not reliable and is not claimed.
 - Untyped GPU clusters need either an explicit inventory or permission to submit short probe
   jobs. `CLUSTER_AUTO_PROBE=never` disables probes completely.
-- vLLM is supported as a batch command. Persistent serving may require cluster-specific
-  tunnels and policies, so it is not claimed by the current no-admin SDK.
+- Persistent sessions require the project to expose the Nodus `load_model`/`infer` contract.
+  Existing framework servers are not automatically adapted to that interface.
+- The SSH channel requires the login host to route to the worker port on the allocated compute
+  node. When that is forbidden, `auto` uses the shared-filesystem queue with higher control
+  latency but identical load-once behavior.
+- A session occupies its SLURM allocation until `close()`, cancellation, timeout, preemption, or
+  scheduler failure. Users are responsible for choosing an appropriate time limit.
 - A remote package index must be reachable to create new venvs with third-party dependencies.
 - A password-only SSH setup is intentionally unsupported in environment variables. Use keys,
   `ssh-agent`, or a configured OpenSSH control connection.

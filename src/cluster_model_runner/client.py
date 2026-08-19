@@ -28,6 +28,7 @@ from .models import (
     ResourceRequest,
 )
 from .resources import ResourceSelector
+from .sessions import SessionHandle, SessionService
 from .slurm import SlurmBackend
 from .state import JobStore
 from .transport import OpenSSHTransport
@@ -129,6 +130,7 @@ class ClusterClient:
             poll_interval=config.poll_interval,
             ttl_seconds=config.discovery_ttl,
         )
+        self.session_service = SessionService(self)
         self._cluster_snapshot: ClusterSnapshot | None = None
         self._cluster_snapshot_at = 0.0
 
@@ -182,9 +184,11 @@ class ClusterClient:
             refresh=refresh,
             require_vram=require_vram,
             on_update=(
-                lambda message: print(f"[nodus] bootstrap | {message}", file=sys.stderr, flush=True)
-                if progress
-                else None
+                lambda message: (
+                    print(f"[nodus] bootstrap | {message}", file=sys.stderr, flush=True)
+                    if progress
+                    else None
+                )
             ),
         )
         self._cluster_snapshot = None
@@ -266,9 +270,7 @@ class ClusterClient:
                 or request.resources.policy in {"smallest-compatible", "safe", "exact"}
             )
         )
-        if requires_vram and any(
-            node.gpu_count > 0 and node.vram_gb <= 0 for node in nodes
-        ):
+        if requires_vram and any(node.gpu_count > 0 and node.vram_gb <= 0 for node in nodes):
             self.bootstrap(require_vram=True)
             nodes = self.discovery.nodes()
         resources = self.selector.resolve(request.resources, nodes, self.discovery.partition_rules)
@@ -394,6 +396,13 @@ class ClusterClient:
 
     def list_jobs(self) -> list[JobHandle]:
         return [JobHandle(self, record["id"]) for record in self.store.list()]
+
+    def session(self, session_id: str) -> SessionHandle:
+        """Reconnect to a persistent model session after a local restart."""
+        return self.session_service.attach(session_id)
+
+    def list_sessions(self) -> list[SessionHandle]:
+        return self.session_service.list()
 
     def status(self, job_id: str) -> JobState:
         return self.status_info(job_id).state
