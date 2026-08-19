@@ -21,7 +21,8 @@ informa o comando, parâmetros, requisitos e arquivos necessários.
 - Snapshot imutável do projeto por hash de conteúdo.
 - Estado persistente local em SQLite.
 - Submissão, acompanhamento, logs, cancelamento e download.
-- Nenhum container, daemon remoto ou senha armazenada pelo SDK.
+- Sessões persistentes que carregam o modelo uma vez e atendem várias inferências.
+- Nenhum container, serviço privilegiado ou senha armazenada pelo SDK.
 - Nenhum passo exige `sudo`, instalação global, alteração do SLURM ou acesso administrativo.
 - Bootstrap opcional com fingerprint e probes SLURM para clusters com GRES não tipado.
 
@@ -126,6 +127,41 @@ request.write_result(data={"mask_count": 1}, artifacts=["mask.png"])
 
 Isso é igual para PyTorch, Transformers, Diffusers, vLLM em batch e código próprio. O projeto
 decide como carregar o modelo; o SDK administra cluster, arquivos e ciclo de vida.
+
+## Sessão persistente
+
+Para evitar recarregar os pesos, o entrypoint da sessão define duas funções. `load_model` roda
+uma única vez dentro do job SLURM; `infer` roda a cada chamada:
+
+```python
+def load_model(context):
+    return MyModel.load(context.checkpoint_path).to("cuda")
+
+def infer(model, request):
+    prediction = model(request.input("image"), **request.parameters)
+    return {"prediction": prediction}
+```
+
+O cliente mantém o mesmo job e a mesma GPU entre chamadas:
+
+```python
+session = model.session(entrypoint="persistent.py", channel="auto")
+session.wait_ready()
+
+first = session.infer(inputs={"image": "a.png"}, parameters={"threshold": 0.5})
+second = session.infer(inputs={"image": "b.png"}, parameters={"threshold": 0.7})
+second.download("results")
+session.close()
+```
+
+`auto` tenta encaminhamento pelo login e depois acesso ao nó via `ProxyJump`. Se nenhum caminho
+alcançar o worker, usa automaticamente a fila no filesystem compartilhado. Os inputs continuam sendo
+transferidos como arquivos; o túnel carrega apenas o manifesto JSON, reduzindo a latência de
+controle. `channel="filesystem"` força o modo mais compatível e `channel="ssh"` exige o túnel.
+
+Enquanto o scheduler não aloca recursos, `wait_ready()` informa `PENDING` e o motivo retornado
+pelo SLURM. O identificador fica no SQLite e pode ser retomado em outro processo com
+`client.session(session_id)`. Encerrar a sessão cancela somente o job registrado por ela.
 
 ## Cache do checkpoint
 
@@ -237,6 +273,8 @@ A CLI não possui lógica própria; ela chama o mesmo SDK importável.
   inferência CUDA e cache SHA-256 de arquivo.
 - [`examples/transformers_llm`](examples/transformers_llm): `tiny-gpt2`, geração causal CUDA e
   cache SHA-256 de diretório multifile.
+- [`examples/persistent_session`](examples/persistent_session): contrato de carga única e
+  múltiplas inferências com fallback automático de canal.
 
 Os exemplos são cobertos por testes offline com transportes e scheduler simulados. Assets
 grandes ficam em `.demo-cache` e são baixados pelos scripts de preparação; não entram no Git.
@@ -257,14 +295,3 @@ arquitetura estão em [`docs/decisions`](docs/decisions), e limitações explíc
 
 Contribuições e divulgação responsável de vulnerabilidades estão descritas em
 [`CONTRIBUTING.md`](CONTRIBUTING.md) e [`SECURITY.md`](SECURITY.md).
-
-## Limites atuais
-
-- O MVP executa vLLM como processo batch. Serviço persistente não faz parte do contrato atual,
-  pois pode depender de túneis e políticas específicas incompatíveis com a premissa sem admin.
-- A criação automática de venv depende de uma partição autorizada com acesso ao índice de
-  pacotes. O Nodus não tenta instalar Python ou bibliotecas globalmente.
-- Dependências devem ser declaradas e fixadas pelo projeto. Não é seguro adivinhar versões de
-  PyTorch, Transformers ou Diffusers sem conhecer o modelo e o driver remoto.
-- Perfis de inventário são opcionais e pertencem à configuração do usuário; o núcleo não inclui
-  nomes de nós, partições, QoS, modelos de GPU ou endpoints de um cluster específico.

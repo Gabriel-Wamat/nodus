@@ -63,6 +63,27 @@ pass an `on_update(JobStatus)` callback for programmatic reporting.
 
 The original `client.submit(JobRequest(...))` API remains supported.
 
+## Persistent sessions
+
+```python
+session = model.session(entrypoint="persistent.py", channel="auto")
+session.wait_ready(timeout=900)
+result = session.infer(inputs={"image": "scene.tif"}, parameters={"prompt": "roads"})
+result.download("results")
+session.close()
+```
+
+The session entrypoint exports `load_model(SessionContext)` and
+`infer(model, SessionRequest)`. The first function is called exactly once per worker process.
+`SessionRequest.write_result()` supports structured data and artifacts. A session can be
+reattached after a local restart with `client.session(session_id)` and enumerated with
+`client.list_sessions()`.
+
+Channels are `auto`, `ssh`, and `filesystem`. `auto` tries a login-host local forward and a
+direct compute-node forward through OpenSSH `ProxyJump`, then falls back to the shared-filesystem
+queue if cluster routing prevents both. The fallback is visible as the selected channel and does
+not reload the model.
+
 ## Resource overrides
 
 `ResourceRequest(min_vram_gb=...)` is the caller's explicit workload requirement. Nodus uses

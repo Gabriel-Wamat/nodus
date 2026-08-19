@@ -16,6 +16,7 @@ This matrix maps each repository claim to reviewable code and cluster-independen
 | Two real examples | `examples/pytorch_vision` uses official ResNet-18 weights; `examples/transformers_llm` uses a multifile Hugging Face model. |
 | Decisions and limitations | ADRs under `docs/decisions`, `docs/architecture.md`, and `docs/limitations.md`. |
 | Cluster-agnostic bootstrap | `ClusterBootstrapper`, topology fingerprints, persisted inventories, configurable probes, representative grouping, progress reporting, and offline probe/cache tests. |
+| Persistent load-once sessions | Layered `sessions` package, standard-library remote worker, SQLite recovery, authenticated SSH plus `ProxyJump`, atomic filesystem fallback, request deduplication, and tests proving one load across repeated calls. |
 | Repository hygiene | Generic `.env.example`, fictional inventory profile, sanitized manifests, injectable contracts, and tests rejecting cluster identifiers in the core. |
 
 Local verification command:
@@ -27,5 +28,5 @@ pytest -q
 uv build
 ```
 
-The current verified result is 48 passing offline tests, clean Ruff, clean strict mypy, and a
+The current verified result is 55 passing offline tests, clean Ruff, clean strict mypy, and a
 wheel containing both `nodus/py.typed` and `cluster_model_runner/py.typed`.

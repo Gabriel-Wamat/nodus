@@ -15,6 +15,13 @@ from cluster_model_runner import (
     Project,
     ResourceRequest,
     RuntimeRequest,
+    SessionChannel,
+    SessionContext,
+    SessionHandle,
+    SessionRequest,
+    SessionResult,
+    SessionState,
+    SessionStatus,
     Venv,
 )
 
@@ -33,5 +40,12 @@ __all__ = [
     "Project",
     "ResourceRequest",
     "RuntimeRequest",
+    "SessionChannel",
+    "SessionContext",
+    "SessionHandle",
+    "SessionRequest",
+    "SessionResult",
+    "SessionState",
+    "SessionStatus",
     "Venv",
 ]
